@@ -1,0 +1,6 @@
+rasterio
+numpy
+docker
+pillow
+tqdm
+opencv-python
