@@ -1,17 +1,39 @@
 import os
 import asyncio
-import aiofiles
 import rasterio
 from rasterio.windows import Window
 from concurrent.futures import ThreadPoolExecutor
+import logging
 
-def crop_image_sync(input_path_layout, output_base_dir):
+# Настраиваем логирование
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+def crop_image_sync(input_path_layout, output_base_dir, step_multiplier):
+    """
+    Обрезает растровое изображение на основе заданного размера и шага.
+
+    Этот метод читает растровое изображение из указанного пути, обрезает его на фрагменты заданного размера,
+    и сохраняет их в указанной выходной директории.
+
+    Параметры:
+    ----------
+    input_path_layout : str
+        Путь к входному растровому файлу.
+    output_base_dir : str
+        Путь к базовой выходной директории.
+    step_multiplier : float
+        Множитель для шага обрезки изображения. Определяет степень перекрытия обрезков.
+
+    Возвращает:
+    -----------
+    None
+    """
     with rasterio.open(input_path_layout) as dataset:
         filename = os.path.basename(input_path_layout)
         base_name = os.path.splitext(filename)[0]
         pixel_size_x, pixel_size_y = dataset.res
         crop_size = 256
-        step_size = crop_size // 4
+        step_size = int(crop_size * step_multiplier)  # Вычисляем шаг обрезки на основе множителя
         output_dir = os.path.join(output_base_dir, f'crop_{int(pixel_size_x)}x{int(pixel_size_y)}', f'{base_name}_crop')
         os.makedirs(output_dir, exist_ok=True)
         width, height = dataset.width, dataset.height
@@ -38,25 +60,59 @@ def crop_image_sync(input_path_layout, output_base_dir):
                 })
                 with rasterio.open(output_path, 'w', **meta) as dest:
                     dest.write(data)
+                logging.info(f'Cropped image saved to {output_path}')  # Логируем сохранение обрезанного изображения
 
-async def crop_image(input_path_layout, output_base_dir, executor):
+async def crop_image(input_path_layout, output_base_dir, step_multiplier, executor):
     loop = asyncio.get_event_loop()
-    await loop.run_in_executor(executor, crop_image_sync, input_path_layout, output_base_dir)
+    await loop.run_in_executor(executor, crop_image_sync, input_path_layout, output_base_dir, step_multiplier)
 
-async def process_directory(input_dir, output_base_dir, executor):
+async def process_directory(input_dir, output_base_dir, step_multiplier, executor):
+    """
+    Обрабатывает все растровые изображения в указанной директории.
+
+    Этот метод проходит по всем файлам в указанной директории, находит все файлы с расширением '.tif' и запускает
+    асинхронную обрезку каждого файла.
+
+    Параметры:
+    ----------
+    input_dir : str
+        Путь к директории, содержащей входные файлы.
+    output_base_dir : str
+        Путь к базовой выходной директории.
+    step_multiplier : float
+        Множитель для шага обрезки изображения.
+    executor : concurrent.futures.Executor
+        Экзекутор для выполнения асинхронных задач.
+
+    Возвращает:
+    -----------
+    None
+    """
     tasks = []
     for root, _, files in os.walk(input_dir):
         for file in files:
             if file.endswith('.tif'):
                 input_path = os.path.join(root, file)
-                tasks.append(crop_image(input_path, output_base_dir, executor))
+                tasks.append(crop_image(input_path, output_base_dir, step_multiplier, executor))
+                logging.info(f'Started processing {input_path}')  # Логируем начало обработки файла
     await asyncio.gather(*tasks)
+    logging.info(f"Processing completed for all files in {input_dir}")  # Логируем завершение обработки директории
 
 if __name__ == "__main__":
+    # Запрашиваем путь к корневой директории набора данных
     print('Enter the path to the root directory for the dataset:')
     input_path_root_dataset = input().strip()
+
+    # Запрашиваем путь к выходной директории
     print('Enter the path to the output directory:')
     output_base_dir = input().strip()
 
+    # Запрашиваем множитель для шага обрезки
+    print('Enter the step multiplier (e.g., 0.25 for 25% step):')
+    step_multiplier = float(input().strip())
+
+    # Создаем экзекутор с количеством рабочих потоков, равным количеству ядер процессора
     executor = ThreadPoolExecutor(max_workers=os.cpu_count())
-    asyncio.run(process_directory(input_path_root_dataset, output_base_dir, executor))
+
+    # Запускаем асинхронную обработку директории
+    asyncio.run(process_directory(input_path_root_dataset, output_base_dir, step_multiplier, executor))
