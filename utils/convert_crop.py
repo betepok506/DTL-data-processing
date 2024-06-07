@@ -26,10 +26,10 @@ def read_image(path, bands):
 def normalize(image):
     min_value = np.min(image)
     max_value = np.max(image)
-    max_value = 4096
-
+    # max_value = 4096
+    image_data = np.log1p(image.astype(np.float32))
     # линейное преобразование для нормирования пикселей
-    normalized_image_data = ((image - min_value) / (max_value - min_value)) * 255
+    normalized_image_data = ((image_data - min_value) / (max_value - min_value)) * 255
 
     return normalized_image_data.astype(np.uint8)
 
