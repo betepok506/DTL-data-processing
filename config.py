@@ -22,4 +22,9 @@ class ExtractingFeaturesConfig:
     server_port: str = 8000
     server_uri: str = 'localhost'
     server_url: str = f'http://{server_uri}:{server_port}'
-    block_size: int = 512 # Количество элементов layout, которые будет отправляться за раз на сервер
+    block_size: int = 512  # Количество элементов layout, которые будет отправляться за раз на сервер
+
+
+class CreateDatasetConfig:
+    path_to_data: str = './data/crop'
+    path_to_save_data: str = './data/dataset'

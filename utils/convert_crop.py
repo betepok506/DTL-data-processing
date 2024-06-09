@@ -16,22 +16,42 @@ MAX_PIXEL_VALUE = 4096  # Max. pixel value, used to normalize the image
 BANDS = [1, 2, 3]
 
 
-def read_image(path, bands):
+def convert_tif2img(path, bands):
     img = rasterio.open(path).read(bands).transpose((1, 2, 0))
-    # img = np.float32(img) / MAX_PIXEL_VALUE
 
-    return img
+    def normalize(image):
+        # max_value = 4096
+        image = np.log1p(image.astype(np.float32))
+        min_value = np.min(image)
+        max_value = np.max(image)
+        # линейное преобразование для нормирования пикселей
+        image = ((image - min_value) / (max_value - min_value)) * 255
+
+        return image.astype(np.uint8)
+
+    image = Image.fromarray(normalize(img))
+    red, green, blue = image.split()
+
+    image = Image.merge('RGB', (blue, green, red))
+    return image
 
 
-def normalize(image):
-    min_value = np.min(image)
-    max_value = np.max(image)
-    # max_value = 4096
-    image_data = np.log1p(image.astype(np.float32))
-    # линейное преобразование для нормирования пикселей
-    normalized_image_data = ((image_data - min_value) / (max_value - min_value)) * 255
+# def read_image(path, bands):
+#     img = rasterio.open(path).read(bands).transpose((1, 2, 0))
+#     # img = np.float32(img) / MAX_PIXEL_VALUE
+#
+#     return img
 
-    return normalized_image_data.astype(np.uint8)
+
+# def normalize(image):
+#     min_value = np.min(image)
+#     max_value = np.max(image)
+#     # max_value = 4096
+#     image_data = np.log1p(image.astype(np.float32))
+#     # линейное преобразование для нормирования пикселей
+#     normalized_image_data = ((image_data - min_value) / (max_value - min_value)) * 255
+#
+#     return normalized_image_data.astype(np.uint8)
 
 
 # def save_image(img, output_file, metadata):
@@ -45,10 +65,5 @@ if __name__ == "__main__":
     for name_file in tqdm(os.listdir(PATH_TO_IMAGES), desc='Преобразование кропов', ncols=180):
         path_to_img = Path(os.path.join(PATH_TO_IMAGES, name_file))
 
-        img = read_image(path_to_img, BANDS)
-        rgb_image = Image.fromarray(normalize(img))
-        red, green, blue = rgb_image.split()
-
-        rgb_image = Image.merge('RGB', (blue, green, red))
-        rgb_image.save(os.path.join(PATH_TO_OUTPUT_DIR, path_to_img.stem + '.png'))
-
+        img = convert_tif2img(path_to_img, BANDS)
+        img.save(os.path.join(PATH_TO_OUTPUT_DIR, path_to_img.stem + '.png'))
