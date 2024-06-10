@@ -132,7 +132,6 @@ async def process_directory(input_dir, output_dir, min_broken_pixels, max_broken
 
 
 def main():
-    # Запросы на английском языке
     input_dir = input("Enter the path to the folder with images in TIFF format: ")
     output_dir = input("Enter the path where the images should be saved: ")
     min_broken_pixels = int(input("Enter the minimum number of broken pixels: "))
