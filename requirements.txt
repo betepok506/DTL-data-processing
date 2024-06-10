@@ -4,3 +4,8 @@ docker
 pillow
 tqdm
 opencv-python
+faiss-cpu
+shapely
+packaging
+pyproj
+pandas
