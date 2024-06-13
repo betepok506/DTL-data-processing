@@ -165,7 +165,6 @@ def pipeline_extracting_features(path_to_weight, name_model):
                     #         raise "Ошибка при добавлении слоя в БД"
                     #     print(response.json())
                     # predict = model.predict(image)
-            break
 
         print('Записываю вектора на диск')
         # Запись векторов признаков на диск
