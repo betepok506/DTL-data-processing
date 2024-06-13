@@ -2,6 +2,7 @@
 /data_faiss
 /tile
 /output_crop
+/weights
 
 /notebooks
 

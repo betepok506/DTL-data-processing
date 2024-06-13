@@ -9,3 +9,4 @@ shapely
 packaging
 pyproj
 pandas
+DTLSiameseNetwork==0.0.6

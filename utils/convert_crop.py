@@ -5,7 +5,7 @@ import rasterio
 import numpy as np
 import logging
 from tqdm import tqdm
-import cv2 as cv
+# import cv2 as cv
 from PIL import Image
 
 logger = logging.getLogger(__name__)

@@ -18,11 +18,14 @@ class FAISSConfig:
 
 class ExtractingFeaturesConfig:
     '''Данный класс содержит параметры конфигурации для pipeline извлечения фиф из изображений датасета'''
-    path_to_data: str = f'./data/crop'  # Путь до нарезанного набора данных (До папки crop)
+    path_to_data: str = f'/data/crop'  # Путь до нарезанного набора данных (До папки crop)
     server_port: str = 8000
-    server_uri: str = 'localhost'
+    server_uri: str = 'aerial-photography-backend'
     server_url: str = f'http://{server_uri}:{server_port}'
     block_size: int = 512  # Количество элементов layout, которые будет отправляться за раз на сервер
+    load_prepared_vectors: bool = True
+    path_to_prepared_vectors: str = '/data/prepared_vectors.npy'
+    path_to_prepared_vectors_data: str = '/data/prepared_vectors_data.json'
 
 
 class CreateDatasetConfig:
