@@ -11,7 +11,7 @@ from pathlib import Path
 class FAISS:
     def __init__(self, parameters: FAISSConfig):
         self.parameters: FAISSConfig = parameters
-        self.index = faiss.index_factory(self.parameters.vector_dim, "IVF1000,PQ64", faiss.METRIC_L2)
+        self.index = faiss.index_factory(self.parameters.vector_dim, f"IVF{int(self.parameters.num_clusters)},PQ64", faiss.METRIC_L2)
 
         self._cur_vectors = np.empty((0, self.parameters.vector_dim))
         self._cur_vectors_ind = np.array([], dtype=np.int8)
