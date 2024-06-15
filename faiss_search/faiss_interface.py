@@ -21,6 +21,11 @@ class FAISS:
         # if self.parameters.overwriting_indexes and os.path.exists(self.parameters.path_to_index):
         #     shutil.rmtree(self.parameters.path_to_index)
 
+    def normalize(self, vectors):
+        # Нормализация векторов для косинусного расстояния
+        faiss.normalize_L2(vectors)
+        return vectors
+
     def training(self, train_vectors: np.array):
         self.index.train(train_vectors)
         self._save_index(os.path.join(self.parameters.path_to_index, self.parameters.trained_index))
@@ -35,59 +40,61 @@ class FAISS:
 
         faiss.write_index(self.index, path_to_save)
 
-    def _create_block(self):
-        '''Функция для создания блока индекса'''
-        os.makedirs(self.parameters.path_to_block_index, exist_ok=True)
-
-        if self._cur_vectors.shape[0] == 0:
-            return
-
-        index = faiss.read_index(os.path.join(self.parameters.path_to_index, self.parameters.trained_index))
-
-        index.add_with_ids(self._cur_vectors, self._cur_vectors_ind)
-        faiss.write_index(index,
-                          os.path.join(self.parameters.path_to_block_index, f"block_{self._cur_num_block}.index"))
-
-        # Обновление информации
-        self._cur_num_block += 1
-        self._cur_vectors = np.empty((0, self.parameters.vector_dim))
-        self._cur_vectors_ind = np.array([])
+    # def _create_block(self):
+    #     '''Функция для создания блока индекса'''
+    #     # os.makedirs(self.parameters.path_to_block_index, exist_ok=True)
+    #
+    #     if self._cur_vectors.shape[0] == 0:
+    #         return
+    #
+    #     # index = faiss.read_index(os.path.join(self.parameters.path_to_index, self.parameters.trained_index))
+    #
+    #     self.index.add_with_ids(self._cur_vectors, self._cur_vectors_ind)
+    #     # faiss.write_index(index,
+    #     #                   os.path.join(self.parameters.path_to_block_index, f"block_{self._cur_num_block}.index"))
+    #
+    #     # Обновление информации
+    #     self._cur_num_block += 1
+    #     self._cur_vectors = np.empty((0, self.parameters.vector_dim))
+    #     self._cur_vectors_ind = np.array([])
 
     def add(self, data: np.array):
         shape = data.shape
         if len(shape) == 1:
             data = [data]
+
+        data = self.normalize(data.astype('float32'))
+
+        mas_data = []
         indexes = []
         for item in data:
-            if len(self._cur_vectors) == self.parameters.block_size:
-                self._create_block()
-
-            self._cur_vectors = np.vstack([self._cur_vectors, item])
-            self._cur_vectors_ind = np.append(self._cur_vectors_ind, self._cur_ind)
-
+            # self.index.add_with_ids(np.array([item]), np.array([self._cur_ind]))
             indexes.append(self._cur_ind)
+            mas_data.append(item)
             self._cur_ind += 1
+
+        self.index.add_with_ids(np.array(mas_data), np.array(indexes))
         return indexes
 
-    def _merge_block(self):
-        final_index = faiss.read_index(os.path.join(self.parameters.path_to_index, self.parameters.trained_index))
-        # ivfs = []
-        for num_block in range(self._cur_num_block):
-            block_index = faiss.read_index(
-                os.path.join(self.parameters.path_to_block_index, f"block_{num_block}.index"))
-            # ivfs.append(block_index.invlists)
-            final_index.merge_from(block_index, num_block)
-            block_index.own_invlists = False
-
-        final_index.ntotal = sum(
-            block_index.ntotal for block_index in
-            [faiss.read_index(os.path.join(self.parameters.path_to_block_index, f"block_{num_block}.index"))
-             for num_block in range(self._cur_num_block)])
-        return final_index
+    # def _merge_block(self):
+    #     final_index = faiss.read_index(os.path.join(self.parameters.path_to_index, self.parameters.trained_index))
+    #     # ivfs = []
+    #     for num_block in range(self._cur_num_block):
+    #         block_index = faiss.read_index(
+    #             os.path.join(self.parameters.path_to_block_index, f"block_{num_block}.index"))
+    #         # ivfs.append(block_index.invlists)
+    #         final_index.merge_from(block_index, num_block)
+    #         block_index.own_invlists = False
+    #
+    #     final_index.ntotal = sum(
+    #         block_index.ntotal for block_index in
+    #         [faiss.read_index(os.path.join(self.parameters.path_to_block_index, f"block_{num_block}.index"))
+    #          for num_block in range(self._cur_num_block)])
+    #     return final_index
 
     def save(self):
-        self._create_block()
-        self.index = self._merge_block()
+        # self._create_block()
+        # self.index = self._merge_block()
         self._save_index(os.path.join(self.parameters.path_to_index, self.parameters.name_index))
 
     def load(self):
@@ -95,6 +102,7 @@ class FAISS:
         self.ntotal = self.index.ntotal
 
     def search(self, query_vectors: np.array, k: int):
+        query_vectors = self.normalize(query_vectors.astype('float32'))
         distances, indices = self.index.search(query_vectors, k)
         return distances, indices
 #

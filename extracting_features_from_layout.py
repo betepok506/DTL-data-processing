@@ -1,16 +1,15 @@
 '''Данный модель содержит скрипт для преобразования сгенерированных слоев подложки в вектор и запись их в базу данных'''
+import os
+
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 from typing import List, Dict
 from faiss_search.faiss_interface import FAISS
-import os
 from config import ExtractingFeaturesConfig, FAISSConfig
 from PIL import Image
 import numpy as np
-from utils.convert_crop import convert_tif2img
-from utils.api_requests import send_request
 from utils.api_requests import ApiClient
 import rasterio
 from shapely.geometry import Polygon
-from pyproj import Transformer
 from tqdm import tqdm
 from utils.transform import transform_polygon
 import torch
@@ -106,6 +105,8 @@ def normalize(image):
 def pipeline_extracting_features(path_to_weight, name_model):
     faiss_config = FAISSConfig()
     d = faiss_config.vector_dim
+    logger.info(f'\t\t Количество кластеров: {faiss_config.num_clusters}')
+    print(f'\t\t Количество кластеров: {faiss_config.num_clusters}')
     extracting_features_config = ExtractingFeaturesConfig()
 
     api_client = ApiClient(extracting_features_config.server_url)
@@ -121,6 +122,7 @@ def pipeline_extracting_features(path_to_weight, name_model):
     # model = torch.load(PATH_TO_MODEL_WEIGHT)
     # checkpoint = torch.load(PATH_TO_MODEL_WEIGHT)
     model.load_state_dict(torch.load(path_to_weight))
+    model.eval()
     model.to(device)
     # img = Image.open(path_to_file)
     if not extracting_features_config.load_prepared_vectors and os.path.exists(extracting_features_config.path_to_prepared_vectors):
@@ -150,8 +152,9 @@ def pipeline_extracting_features(path_to_weight, name_model):
                     # feature_vector = np.random.random(d).astype('float32')
                     image = normalize(image[:3].transpose((1, 2, 0)))
                     # image = convert_tif2img(path_to_filename, (1,2,3))
-                    feature_vector = model.predict(image, device=device)
-                    feature_vector = feature_vector.cpu().detach().numpy()
+                    with torch.no_grad():
+                        feature_vector = model.predict(image, device=device)
+                        feature_vector = feature_vector.cpu().detach().numpy()
 
                     # Добавление вектора в базу FAISS
                     # index = db_faiss.add(feature_vector)[0]
@@ -186,8 +189,9 @@ def pipeline_extracting_features(path_to_weight, name_model):
         with open(extracting_features_config.path_to_prepared_vectors_data, 'r') as f:
             data = json.load(f)
 
-    print(f'Количество векторов для обучения FAISS {len(train_vector.shape)}')
+    print(f'Количество векторов для обучения FAISS {train_vector.shape}')
     print('Обучение FAISS...')
+    print(f'Размер выборки для обучения: {train_vector.shape}')
     db_faiss.training(train_vectors=train_vector)
     print("Обучение заверешно...")
 
@@ -203,7 +207,7 @@ def pipeline_extracting_features(path_to_weight, name_model):
         if not 200 <= response.status_code < 300:
             raise "Ошибка при добавлении слоя в БД"
         # print(response.json())
-
+    print(f'Количество векторов в FAISS: {db_faiss.index.ntotal}')
     db_faiss.save()
 
 
@@ -212,6 +216,6 @@ if __name__ == "__main__":
     # parser.add_argument("--path_to_weight", help="")
     # parser.add_argument("--name_model", help="")
     # args = parser.parse_args()
-    path_to_weight = os.getenv('PATH_TO_WEIGHT', '../weights/resnet50_3.pth')
+    path_to_weight = os.getenv('PATH_TO_WEIGHT', './weights/resnet50_3.pth')
     name_model = os.getenv('NAME_MODEL', 'resnet50')
     pipeline_extracting_features(path_to_weight, name_model)
