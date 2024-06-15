@@ -37,24 +37,34 @@ def read_image(path_to_image: str):
         transform = dataset.transform
         crs = dataset.crs
         # Получение границ изображения в координатах пикселей
-        width = dataset.width
-        height = dataset.height
+        # width = dataset.width
+        # height = dataset.height
 
         # Координаты углов в пикселях
-        pixel_corners = [
-            (0, 0),  # Верхний левый угол
-            (width, 0),  # Верхний правый угол
-            (width, height),  # Нижний правый угол
-            (0, height)  # Нижний левый угол
-        ]
+        # pixel_corners = [
+        #     (0, 0),  # Верхний левый угол
+        #     (width, 0),  # Верхний правый угол
+        #     (width, height),  # Нижний правый угол
+        #     (0, height)  # Нижний левый угол
+        # ]
 
-        # Преобразование координат пикселей в географические координаты
-        geo_corners = [rasterio.transform.xy(transform, y, x) for x, y in pixel_corners]
-        transformer = Transformer.from_crs(crs, "EPSG:32637", always_xy=True)
-        latlon_corners = [transformer.transform(x, y) for x, y in geo_corners]
+        # # Преобразование координат пикселей в географические координаты
+        # geo_corners = [rasterio.transform.xy(transform, y, x) for x, y in pixel_corners]
+        # transformer = Transformer.from_crs(crs, "EPSG:32637", always_xy=True)
+        # latlon_corners = [transformer.transform(x, y) for x, y in geo_corners]
+
+        upper_left = (transform[2], transform[5])  # координаты левого верхнего угла
+        lower_right = (transform[2] + transform[0] * dataset.width,  # X координата правого нижнего угла
+                       transform[5] + transform[4] * dataset.height)
+        polygon = transform_polygon(Polygon([
+            (upper_left[0], upper_left[1]),
+            (lower_right[0], upper_left[1]),
+            (lower_right[0], lower_right[1]),
+            (upper_left[0], lower_right[1])
+        ]),"EPSG:32637", "EPSG:4326" )
 
         # Создание полигона
-        polygon = Polygon(latlon_corners)
+        # polygon = Polygon(latlon_corners)
         # transformed_polygon = transform_polygon(polygon, "EPSG:32637", "EPSG:4326")
         # Создание полигона
         # polygon = Polygon(geo_corners)
@@ -151,20 +161,12 @@ def pipeline_extracting_features(path_to_weight, name_model):
                     data.append({
                         'faiss_id': None,
                         "polygon_coordinates": str(polygon),
-                        "layout_name": folder_layout_crop,
+                        "layout_name": folder_layout_crop.replace('_crop', ''),
                         "dim_space_x": int(dim_space_x),
                         "dim_space_y": int(dim_space_y),
                         "filename": filename
                     })
 
-                    # # Отправляем данные в базу
-                    # if len(data) >= faiss_config.block_size:
-                    #     response = send_data_for_server(api_client, data)
-                    #
-                    #     if not 200 <= response.status_code < 300:
-                    #         raise "Ошибка при добавлении слоя в БД"
-                    #     print(response.json())
-                    # predict = model.predict(image)
 
         print('Записываю вектора на диск')
         # Запись векторов признаков на диск
@@ -194,6 +196,7 @@ def pipeline_extracting_features(path_to_weight, name_model):
         index = db_faiss.add(train_vector[start_block: start_block + faiss_config.block_size])
         for ind_data, ind_vec in zip(range(start_block, start_block + faiss_config.block_size), index):
             data[ind_data]['faiss_id'] = ind_vec
+            data[ind_data]['layout_name'] = data[ind_data]['layout_name'].replace('_crop', '')
 
         response = send_data_for_server(api_client, data[start_block: start_block + faiss_config.block_size])
 
@@ -201,12 +204,14 @@ def pipeline_extracting_features(path_to_weight, name_model):
             raise "Ошибка при добавлении слоя в БД"
         # print(response.json())
 
+    db_faiss.save()
+
 
 if __name__ == "__main__":
     # parser = argparse.ArgumentParser(description="")
     # parser.add_argument("--path_to_weight", help="")
     # parser.add_argument("--name_model", help="")
     # args = parser.parse_args()
-    path_to_weight = os.getenv('PATH_TO_WEIGHT')
-    name_model = os.getenv('NAME_MODEL')
+    path_to_weight = os.getenv('PATH_TO_WEIGHT', '../weights/resnet50_3.pth')
+    name_model = os.getenv('NAME_MODEL', 'resnet50')
     pipeline_extracting_features(path_to_weight, name_model)

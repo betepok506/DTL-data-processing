@@ -4,7 +4,7 @@ import os
 
 class FAISSConfig:
     '''Данный класс содержит параметры конфигурации для работы с FAISS'''
-    path_to_index: str = './data_faiss'  # Путь до папки, где хранятся индексы
+    path_to_index: str = '/data_faiss'  # Путь до папки, где хранятся индексы
     path_to_block_index: str = f'{path_to_index}/block'  # Путь до папки, содержищей блоки индекса
     name_index: str = 'faiss_index.index'  # Название файла, содержащего индекс
     trained_index: str = 'trained_index.index'  # Название файла, содержащего индекс для тренировки
