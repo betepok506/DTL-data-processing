@@ -4,3 +4,9 @@ docker
 pillow
 tqdm
 opencv-python
+faiss-cpu
+shapely
+packaging
+pyproj
+pandas
+DTLSiameseNetwork==0.0.6

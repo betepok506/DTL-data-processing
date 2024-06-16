@@ -100,19 +100,25 @@ async def process_directory(input_dir, output_base_dir, step_multiplier, executo
 
 if __name__ == "__main__":
     # Запрашиваем путь к корневой директории набора данных
-    print('Enter the path to the root directory for the dataset:')
-    input_path_root_dataset = input().strip()
+    # print('Enter the path to the root directory for the dataset:')
+    # input_path_root_dataset = input().strip()
+    INPUT_PATH_ROOT_DATASET = os.getenv("INPUT_PATH_ROOT_DATASET")
+    logging.info(f"Path to the root directory for the dataset: {INPUT_PATH_ROOT_DATASET}")
 
     # Запрашиваем путь к выходной директории
-    print('Enter the path to the output directory:')
-    output_base_dir = input().strip()
+    # print('Enter the path to the output directory:')
+    # output_base_dir = input().strip()
+    OUTPUT_BASE_DIR = os.getenv("OUTPUT_BASE_DIR")
+    logging.info(f"Path to the output directory: {OUTPUT_BASE_DIR}")
 
     # Запрашиваем множитель для шага обрезки
-    print('Enter the step multiplier (e.g., 0.25 for 25% step):')
-    step_multiplier = float(input().strip())
+    # print('Enter the step multiplier (e.g., 0.25 for 25% step):')
+    # step_multiplier = float(input().strip())
+    STEP_MULTIPLIER = float(os.getenv("STEP_MULTIPLIER"))
+    logging.info(f"step multiplier: {STEP_MULTIPLIER}")
 
     # Создаем экзекутор с количеством рабочих потоков, равным количеству ядер процессора
     executor = ThreadPoolExecutor(max_workers=os.cpu_count())
 
     # Запускаем асинхронную обработку директории
-    asyncio.run(process_directory(input_path_root_dataset, output_base_dir, step_multiplier, executor))
+    asyncio.run(process_directory(INPUT_PATH_ROOT_DATASET, OUTPUT_BASE_DIR, STEP_MULTIPLIER, executor))

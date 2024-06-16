@@ -127,12 +127,17 @@ async def downscale(input_dir, output_dir, resolutions, executor):
 
 if __name__ == "__main__":
     # Запрашиваем путь к корневой директории набора данных
-    print('Enter the path to the root directory for the dataset:')
-    input_path_root_dataset = input().strip()
+    # print('Enter the path to the root directory for the dataset:')
+    # input_path_root_dataset = input().strip()
+    INPUT_PATH_ROOT_DATASET = os.getenv("INPUT_PATH_ROOT_DATASET")
+    logging.info(f"Path to the root directory for the dataset: {INPUT_PATH_ROOT_DATASET}")
 
     # Запрашиваем путь к директории для сохранения уменьшенных изображений
-    print('Enter the path to the directory for saving downscaled images:')
-    output_dir = input().strip()
+    # print('Enter the path to the directory for saving downscaled images:')
+    # output_dir = input().strip()
+
+    OUTPUT_DIR = os.getenv("OUTPUT_DIR")
+    logging.info(f"Path to the directory for saving downscaled images: {OUTPUT_DIR}")
 
     # Параметры разрешений для уменьшения масштаба
     resolutions = [
@@ -146,4 +151,4 @@ if __name__ == "__main__":
     executor = ThreadPoolExecutor(max_workers=os.cpu_count())
 
     # Запускаем асинхронную функцию downscale
-    asyncio.run(downscale(input_path_root_dataset, output_dir, resolutions, executor))
+    asyncio.run(downscale(INPUT_PATH_ROOT_DATASET, OUTPUT_DIR, resolutions, executor))
