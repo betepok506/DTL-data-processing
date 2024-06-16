@@ -121,8 +121,8 @@ docker run --gpus all --network=network-aerial-photography -v  "${PWD}/weights:/
 - PATH_TO_WEIGHT - Путь до весов модели
 - NAME_MODEL - Название модели
 
-В результате работы в каталоге `./data/data_faiss` будет создан индекс FAISS (файл `faiss_index.index`) и 
-необходимые данные для него (каталог `block`), которые необходимо переместить в каталог `/dependencies/db_faiss`
+В результате работы в каталоге `./data/data_faiss` будет создан индекс FAISS (файл `faiss_index.index`), 
+который необходимо переместить в каталог `/dependencies/db_faiss`
 (сервера DTL-api)[https://github.com/betepok506/DTL-api]. Более подробную инструкцию смотреть там
 
 ## 3.4 Создание набора данных для обучения нейронной сети
