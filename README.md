@@ -59,7 +59,7 @@ docker run --rm -v  "$(PWD)\\data:/data" -e INPUT_PATH_ROOT_DATASET='/data' -e O
 - downscale - Данный каталог содержит набор каталогов, где в каждом каталоге содержится набор изображений с разной разрешающей способностью для каждого слоя
 
 Примерная структура
-
+```commandline
 /data
 ├── downscale
 │   ├── layout_2021-06-15_downscale
@@ -72,7 +72,7 @@ docker run --rm -v  "$(PWD)\\data:/data" -e INPUT_PATH_ROOT_DATASET='/data' -e O
    ├── layout_2021-06-15.tif
     ...
    └── layout_2022-03-17.tif
-
+```
 ## 3.2 Нарезка снимков на плитки
 
 Для сборки контейнера используйте команду:
