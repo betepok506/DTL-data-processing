@@ -15,7 +15,8 @@ from utils.transform import transform_polygon
 import torch
 import argparse
 import json
-from dtl_siamese_network import SiameseNet, TorhModelFeatureExtraction, ResNet
+from utils.convert_crop import convert_tif2img
+from dtl_siamese_network import SiameseNet, TorhModelFeatureExtraction, ResNet, hog_feature_extraction
 import logging
 
 logger = logging.getLogger(__name__)
@@ -34,24 +35,6 @@ def read_image(path_to_image: str):
 
         # Получение трансформации изображения
         transform = dataset.transform
-        crs = dataset.crs
-        # Получение границ изображения в координатах пикселей
-        # width = dataset.width
-        # height = dataset.height
-
-        # Координаты углов в пикселях
-        # pixel_corners = [
-        #     (0, 0),  # Верхний левый угол
-        #     (width, 0),  # Верхний правый угол
-        #     (width, height),  # Нижний правый угол
-        #     (0, height)  # Нижний левый угол
-        # ]
-
-        # # Преобразование координат пикселей в географические координаты
-        # geo_corners = [rasterio.transform.xy(transform, y, x) for x, y in pixel_corners]
-        # transformer = Transformer.from_crs(crs, "EPSG:32637", always_xy=True)
-        # latlon_corners = [transformer.transform(x, y) for x, y in geo_corners]
-
         upper_left = (transform[2], transform[5])  # координаты левого верхнего угла
         lower_right = (transform[2] + transform[0] * dataset.width,  # X координата правого нижнего угла
                        transform[5] + transform[4] * dataset.height)
@@ -61,27 +44,6 @@ def read_image(path_to_image: str):
             (lower_right[0], lower_right[1]),
             (upper_left[0], lower_right[1])
         ]),"EPSG:32637", "EPSG:4326" )
-
-        # Создание полигона
-        # polygon = Polygon(latlon_corners)
-        # transformed_polygon = transform_polygon(polygon, "EPSG:32637", "EPSG:4326")
-        # Создание полигона
-        # polygon = Polygon(geo_corners)
-
-        # # Получение границ изображения
-        # bounds = dataset.bounds
-        #
-        # # Координаты углов
-        # corners = [
-        #     (bounds.left, bounds.top),  # Верхний левый угол
-        #     (bounds.right, bounds.top),  # Верхний правый угол
-        #     (bounds.right, bounds.bottom),  # Нижний правый угол
-        #     (bounds.left, bounds.bottom),  # Нижний левый угол
-        #     (bounds.left, bounds.top)  # Замыкаем полигон, возвращаемся в начало
-        # ]
-        #
-        # # Создание полигона
-        # polygon = Polygon(corners)
 
         return image_data, polygon
 
@@ -136,6 +98,9 @@ def pipeline_extracting_features(path_to_weight, name_model):
     if not extracting_features_config.load_prepared_vectors or not os.path.exists(extracting_features_config.path_to_prepared_vectors):
 
         for folder_crop in os.listdir(ExtractingFeaturesConfig.path_to_data):
+            if folder_crop == 'crop_10x10':
+                continue
+
             path_to_folder_crop = os.path.join(ExtractingFeaturesConfig.path_to_data, folder_crop)
 
             for folder_layout_crop in os.listdir(path_to_folder_crop):
@@ -150,15 +115,23 @@ def pipeline_extracting_features(path_to_weight, name_model):
 
                     # Псевдо вектор признаков
                     # feature_vector = np.random.random(d).astype('float32')
-                    image = normalize(image[:3].transpose((1, 2, 0)))
-                    # image = convert_tif2img(path_to_filename, (1,2,3))
+                    # image = normalize(image[:3].transpose((1, 2, 0)))
+                    image = convert_tif2img(path_to_filename, (1,2,3))
                     with torch.no_grad():
                         feature_vector = model.predict(image, device=device)
                         feature_vector = feature_vector.cpu().detach().numpy()
 
+                    if extracting_features_config.use_hog:
+                        hog_feature_vector = np.expand_dims(hog_feature_extraction(image),axis=0)
+
+                        feature_vector = np.hstack((feature_vector, hog_feature_vector,  np.expand_dims(np.zeros(28), axis=0)))
+
                     # Добавление вектора в базу FAISS
                     # index = db_faiss.add(feature_vector)[0]
-                    train_vector = np.vstack((train_vector, feature_vector))
+                    try:
+                        train_vector = np.vstack((train_vector, feature_vector))
+                    except Exception as e:
+                        print(e)
 
                     dim_space_x, dim_space_y = folder_crop.replace("crop_", "").split("x")
                     data.append({
@@ -200,7 +173,7 @@ def pipeline_extracting_features(path_to_weight, name_model):
         index = db_faiss.add(train_vector[start_block: start_block + faiss_config.block_size])
         for ind_data, ind_vec in zip(range(start_block, start_block + faiss_config.block_size), index):
             data[ind_data]['faiss_id'] = ind_vec
-            data[ind_data]['layout_name'] = data[ind_data]['layout_name'].replace('_crop', '')
+            data[ind_data]['layout_name'] = '_'.join(data[ind_data]['layout_name'].split('_')[:2])
 
         response = send_data_for_server(api_client, data[start_block: start_block + faiss_config.block_size])
 
