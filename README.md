@@ -8,6 +8,7 @@
 
 Конфигурирование проекта осуществляется через файл config.py в котором каждый класс является конфигурационным файлом 
 
+34752 
 # 3 Установка и запуск
 
 Процесс предобработки данных состоит из 3-х этопов:
@@ -99,8 +100,9 @@ docker run --rm -v  "$(PWD)\\data:/data" -e INPUT_PATH_ROOT_DATASET='/data' -e O
 
 Перед запуском этого этапа необходимо запустить сервер (https://github.com/betepok506/DTL-api) выполнить первый этап запуска.
 
-**Также необходимо загрузить веса модели (ссылка)[https://disk.yandex.ru/d/UzcSbTGY9nNOSA]**
+**Также необходимо загрузить веса модели (ссылка на старые веса)[https://disk.yandex.ru/d/UzcSbTGY9nNOSA]**
 
+**(ссылка на новые веса)[https://disk.yandex.ru/d/CzrMe_78PxREbQ]**
 Далее необходимо создать сеть Docker, если она не была ранее создана:
 ```commandline
 docker network create network-aerial-photography
@@ -115,11 +117,21 @@ docker build -t extracting-features-container -f extracting_features.Dockerfile 
 
 Для запуска контейнера извлечения признаков используйте команду
 ```commandline
-docker run --gpus all --network=network-aerial-photography -v  "${PWD}/weights:/weights" -v "${PWD}//data:/data" -v "${PWD}\\data\\data_faiss:/data_faiss" -e PATH_TO_WEIGHT='/weights/resnet50_3.pth' -e NAME_MODEL='resnet50' extracting-features-container
+docker run --gpus all --network=network-aerial-photography --env-file .env_extracting -v  "${PWD}/weights:/weights" -v "${PWD}//data:/data" -v "${PWD}\\data\\data_faiss:/data_fa
+iss"  extracting-features-container
+
 ```
-где:
+где в .env_extracting:
 - PATH_TO_WEIGHT - Путь до весов модели
 - NAME_MODEL - Название модели
+- SERVER_URI - uri сервера
+- SERVER_PORT - Порт сервера
+- NUM_CLUSTERS - Количество кластеров в Faiss
+- VECTOR_DIM - размерность вектора в Faiss
+
+**Если вы загрузили старые веса, то параметру NAME_MODEL необходимо присвоить значение `resnet`, если вы загрузили новые веса
+то параметру NAME_MODEL необходимо присвоить значение `resnet2`**
+
 
 В результате работы в каталоге `./data/data_faiss` будет создан индекс FAISS (файл `faiss_index.index`), 
 который необходимо переместить в каталог `/dependencies/db_faiss`
