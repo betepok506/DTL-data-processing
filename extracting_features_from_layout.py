@@ -16,7 +16,7 @@ import torch
 import argparse
 import json
 from utils.convert_crop import convert_tif2img
-from dtl_siamese_network import SiameseNet, TorhModelFeatureExtraction, ResNet, hog_feature_extraction
+from dtl_siamese_network import SiameseNet, TorhModelFeatureExtraction, ResNet, hog_feature_extraction, ResNet2
 import logging
 
 logger = logging.getLogger(__name__)
@@ -77,16 +77,14 @@ def pipeline_extracting_features(path_to_weight, name_model):
     data = []
     # Объявление faiss
     db_faiss = FAISS(faiss_config)
-    embedding_net = ResNet()
-    # embedding_net = TorhModelFeatureExtraction(name=name_model)
+    embedding_net = ResNet2()
+
     model = SiameseNet(embedding_net)
     print(f'Имя модели: {name_model}')
-    # model = torch.load(PATH_TO_MODEL_WEIGHT)
-    # checkpoint = torch.load(PATH_TO_MODEL_WEIGHT)
     model.load_state_dict(torch.load(path_to_weight))
     model.eval()
     model.to(device)
-    # img = Image.open(path_to_file)
+
     if not extracting_features_config.load_prepared_vectors and os.path.exists(extracting_features_config.path_to_prepared_vectors):
         print('Удаляю предварительно подготовленные вектора')
         os.remove(extracting_features_config.path_to_prepared_vectors)
@@ -113,25 +111,18 @@ def pipeline_extracting_features(path_to_weight, name_model):
                     path_to_filename = os.path.join(path_to_layout_crop, filename)
                     image, polygon = read_image(path_to_filename)
 
-                    # Псевдо вектор признаков
-                    # feature_vector = np.random.random(d).astype('float32')
-                    # image = normalize(image[:3].transpose((1, 2, 0)))
                     image = convert_tif2img(path_to_filename, (1,2,3))
                     with torch.no_grad():
                         feature_vector = model.predict(image, device=device)
                         feature_vector = feature_vector.cpu().detach().numpy()
 
-                    if extracting_features_config.use_hog:
-                        hog_feature_vector = np.expand_dims(hog_feature_extraction(image),axis=0)
-
-                        feature_vector = np.hstack((feature_vector, hog_feature_vector,  np.expand_dims(np.zeros(28), axis=0)))
-
-                    # Добавление вектора в базу FAISS
-                    # index = db_faiss.add(feature_vector)[0]
                     try:
                         train_vector = np.vstack((train_vector, feature_vector))
-                    except Exception as e:
-                        print(e)
+                    except ValueError as e:
+                        print(f'Произошла ошибка: {e}. Был неверно указан размер векторов и он автоматически исправлен. ')
+                        train_vector = np.empty((0, feature_vector.shape[1]))
+                        train_vector = np.vstack((train_vector, feature_vector))
+                        faiss_config.vector_dim = feature_vector.shape[1]
 
                     dim_space_x, dim_space_y = folder_crop.replace("crop_", "").split("x")
                     data.append({
@@ -189,6 +180,6 @@ if __name__ == "__main__":
     # parser.add_argument("--path_to_weight", help="")
     # parser.add_argument("--name_model", help="")
     # args = parser.parse_args()
-    path_to_weight = os.getenv('PATH_TO_WEIGHT', './weights/resnet50_3.pth')
+    path_to_weight = os.getenv('PATH_TO_WEIGHT', './weights/resnet50_2_cosine_similarity.pth')
     name_model = os.getenv('NAME_MODEL', 'resnet50')
     pipeline_extracting_features(path_to_weight, name_model)
