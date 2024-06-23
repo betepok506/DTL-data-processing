@@ -68,7 +68,8 @@ def pipeline_extracting_features(path_to_weight, name_model):
     faiss_config = FAISSConfig()
     d = faiss_config.vector_dim
     logger.info(f'\t\t Количество кластеров: {faiss_config.num_clusters}')
-    print(f'\t\t Количество кластеров: {faiss_config.num_clusters}')
+    logger.info(f'\t\t Путь до модели: {path_to_weight}')
+
     extracting_features_config = ExtractingFeaturesConfig()
 
     api_client = ApiClient(extracting_features_config.server_url)
@@ -176,10 +177,7 @@ def pipeline_extracting_features(path_to_weight, name_model):
 
 
 if __name__ == "__main__":
-    # parser = argparse.ArgumentParser(description="")
-    # parser.add_argument("--path_to_weight", help="")
-    # parser.add_argument("--name_model", help="")
-    # args = parser.parse_args()
+
     path_to_weight = os.getenv('PATH_TO_WEIGHT', './weights/resnet50_2_cosine_similarity.pth')
     name_model = os.getenv('NAME_MODEL', 'resnet50')
     pipeline_extracting_features(path_to_weight, name_model)
