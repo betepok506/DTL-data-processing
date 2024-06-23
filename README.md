@@ -116,11 +116,17 @@ docker build -t extracting-features-container -f extracting_features.Dockerfile 
 
 Для запуска контейнера извлечения признаков используйте команду
 ```commandline
-docker run --gpus all --network=network-aerial-photography -v  "${PWD}/weights:/weights" -v "${PWD}//data:/data" -v "${PWD}\\data\\data_faiss:/data_faiss" -e PATH_TO_WEIGHT='/weights/resnet50_3.pth' -e NAME_MODEL='resnet50' extracting-features-container
+docker run --gpus all --network=network-aerial-photography --env-file .env_extracting -v  "${PWD}/weights:/weights" -v "${PWD}//data:/data" -v "${PWD}\\data\\data_faiss:/data_fa
+iss"  extracting-features-container
+
 ```
-где:
+где в .env_extracting:
 - PATH_TO_WEIGHT - Путь до весов модели
 - NAME_MODEL - Название модели
+- SERVER_URI - uri сервера
+- SERVER_PORT - Порт сервера
+- NUM_CLUSTERS - Количество кластеров в Faiss
+- VECTOR_DIM - размерность вектора в Faiss
 
 В результате работы в каталоге `./data/data_faiss` будет создан индекс FAISS (файл `faiss_index.index`), 
 который необходимо переместить в каталог `/dependencies/db_faiss`
