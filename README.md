@@ -100,8 +100,9 @@ docker run --rm -v  "$(PWD)\\data:/data" -e INPUT_PATH_ROOT_DATASET='/data' -e O
 
 Перед запуском этого этапа необходимо запустить сервер (https://github.com/betepok506/DTL-api) выполнить первый этап запуска.
 
-**Также необходимо загрузить веса модели (ссылка)[https://disk.yandex.ru/d/UzcSbTGY9nNOSA]**
+**Также необходимо загрузить веса модели (ссылка на старые веса)[https://disk.yandex.ru/d/UzcSbTGY9nNOSA]**
 
+**(ссылка на новые веса)[https://disk.yandex.ru/d/CzrMe_78PxREbQ]**
 Далее необходимо создать сеть Docker, если она не была ранее создана:
 ```commandline
 docker network create network-aerial-photography
@@ -127,6 +128,10 @@ iss"  extracting-features-container
 - SERVER_PORT - Порт сервера
 - NUM_CLUSTERS - Количество кластеров в Faiss
 - VECTOR_DIM - размерность вектора в Faiss
+
+**Если вы загрузили старые веса, то параметру NAME_MODEL необходимо присвоить значение `resnet`, если вы загрузили новые веса
+то параметру NAME_MODEL необходимо присвоить значение `resnet2`**
+
 
 В результате работы в каталоге `./data/data_faiss` будет создан индекс FAISS (файл `faiss_index.index`), 
 который необходимо переместить в каталог `/dependencies/db_faiss`

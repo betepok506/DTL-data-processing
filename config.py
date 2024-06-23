@@ -33,6 +33,7 @@ class ExtractingFeaturesConfig:
     load_prepared_vectors: bool = True
     path_to_prepared_vectors: str = '/data/prepared_vectors.npy'
     path_to_prepared_vectors_data: str = '/data/prepared_vectors_data.json'
+    name_model: str = os.getenv("NAME_MODEL")
 
 
 class CreateDatasetConfig:

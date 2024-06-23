@@ -78,7 +78,10 @@ def pipeline_extracting_features(path_to_weight, name_model):
     data = []
     # Объявление faiss
     db_faiss = FAISS(faiss_config)
-    embedding_net = ResNet2()
+    if name_model == 'resnet':
+        embedding_net = ResNet()
+    else:
+        embedding_net = ResNet2()
 
     model = SiameseNet(embedding_net)
     print(f'Имя модели: {name_model}')
